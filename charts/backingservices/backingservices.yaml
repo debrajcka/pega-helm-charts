@@ -1,0 +1,785 @@
+---
+# Source: backingservices/charts/constellation-messaging/templates/messaging-registry-secret.yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: pega-constl-msg-registry-secret
+  namespace: pegabackingservices
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  .dockerconfigjson: eyJhdXRocyI6IHsiWU9VUl9ET0NLRVJfUkVHSVNUUllfVVJMIjogeyJhdXRoIjogIldVOVZVbDlFVDBOTFJWSmZVa1ZIU1ZOVVVsbGZWVk5GVWs1QlRVVTZXVTlWVWw5RVQwTkxSVkpmVWtWSFNWTlVVbGxmVUVGVFUxZFBVa1E9In19fQ==
+type: kubernetes.io/dockerconfigjson
+---
+# Source: backingservices/charts/constellation/templates/clln-registry-secret.yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: constellation-registry-secret
+  namespace: pegabackingservices
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+data:
+  .dockerconfigjson: eyJhdXRocyI6IHsiWU9VUl9ET0NLRVJfUkVHSVNUUllfVVJMIjogeyJhdXRoIjogIldVOVZVbDlFVDBOTFJWSmZVa1ZIU1ZOVVVsbGZWVk5GVWs1QlRVVTZXVTlWVWw5RVQwTkxSVkpmVWtWSFNWTlVVbGxmVUVGVFUxZFBVa1E9In19fQ==
+type: kubernetes.io/dockerconfigjson
+---
+# Source: backingservices/charts/elasticsearch/templates/test/test-elasticsearch-health.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "backingservices-jrlui-test"
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+  containers:
+  - name: "backingservices-lyjyl-test"
+    image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.9"
+    imagePullPolicy: "IfNotPresent"
+    command:
+      - "sh"
+      - "-c"
+      - |
+        #!/usr/bin/env bash -e
+        curl -XGET --fail 'elasticsearch-master:9200/_cluster/health?wait_for_status=green&timeout=1s'
+  restartPolicy: Never
+MANIFEST:
+---
+# Source: backingservices/charts/srs/templates/srsservice_networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name:  pega-srs-networkpolicy
+  namespace: pegabackingservices
+  labels:
+    helm.sh/chart: srs-0.1.0
+    app.kubernetes.io/name: srs
+    app.kubernetes.io/instance: backingservices
+    app.kubernetes.io/version: "1.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  podSelector:
+    matchLabels:
+
+      app.kubernetes.io/name: srs-service
+      app.kubernetes.io/instance: backingservices
+
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 8080
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: srs-ops
+          app.kubernetes.io/instance: backingservices
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: "elasticsearch-master"
+    ports:
+    - protocol: TCP
+      port: 9200
+
+  - to:
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+      - podSelector:
+          matchExpressions:
+            - key: k8s-app
+              operator: In
+              values: ["kube-dns", "coredns"]
+    ports:
+      - protocol: TCP
+        port: 53
+      - protocol: TCP
+        port: 1053
+      - protocol: TCP
+        port: 80
+      - protocol: TCP
+        port: 8080
+---
+# Source: backingservices/charts/elasticsearch/templates/poddisruptionbudget.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: "elasticsearch-master-pdb"
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: "elasticsearch-master"
+---
+# Source: backingservices/charts/srs/templates/srsservice_poddisruptionbudget.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pega-srs
+  namespace: pegabackingservices
+  labels:
+    helm.sh/chart: srs-0.1.0
+    app.kubernetes.io/name: srs
+    app.kubernetes.io/instance: backingservices
+    app.kubernetes.io/version: "1.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: srs-service
+      app.kubernetes.io/instance: backingservices
+---
+# Source: backingservices/charts/srs/templates/elasticsearchsecret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: srs-elastic-credentials
+type: kubernetes.io/basic-auth
+data:
+  username: ZWxhc3RpYw==
+  password: SFY1dUpnWldxUzlNYTU4aVJPS2w=
+---
+# Source: backingservices/charts/srs/templates/registrysecret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pega-srs-reg-secret
+  namespace: pegabackingservices
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsidXNlcm5hbWUiOiIiLCJwYXNzd29yZCI6IiIsImF1dGgiOiJPZz09In19fQ==
+---
+# Source: backingservices/charts/elasticsearch/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-master-config
+  labels:
+    heritage: "Helm"
+    release: "backingservices"
+    chart: "elasticsearch"
+    app: "elasticsearch-master"
+data:
+  elasticsearch.yml: |
+    xpack.security.enabled: true
+    xpack.security.transport.ssl.enabled: true
+    xpack.security.transport.ssl.verification_mode: certificate
+    xpack.security.transport.ssl.keystore.path: /usr/share/elasticsearch/config/certs/elastic-certificates.p12
+    xpack.security.transport.ssl.truststore.path: /usr/share/elasticsearch/config/certs/elastic-certificates.p12
+---
+# Source: backingservices/charts/constellation-messaging/templates/messaging-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pega-constl-msg
+  labels:
+    app: pega-constl-msg
+spec:
+  selector:
+    app: pega-constl-msg
+  ports:
+  - name: http
+    protocol: TCP
+    port: 3000
+    targetPort: 3000
+  type: NodePort
+---
+# Source: backingservices/charts/constellation/templates/clln-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: constellation
+  labels:
+    app: constellation
+spec:
+  selector:
+    app: constellation
+  ports:
+  - name: http
+    protocol: TCP
+    port: 3000
+    targetPort: 3000
+  type: NodePort
+---
+# Source: backingservices/charts/elasticsearch/templates/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch-master
+  labels:
+    heritage: "Helm"
+    release: "backingservices"
+    chart: "elasticsearch"
+    app: "elasticsearch-master"
+  annotations:
+    {}
+spec:
+  type: ClusterIP
+  selector:
+    release: "backingservices"
+    chart: "elasticsearch"
+    app: "elasticsearch-master"
+  publishNotReadyAddresses: false
+  ports:
+  - name: http
+    protocol: TCP
+    port: 9200
+  - name: transport
+    protocol: TCP
+    port: 9300
+---
+# Source: backingservices/charts/elasticsearch/templates/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch-master-headless
+  labels:
+    heritage: "Helm"
+    release: "backingservices"
+    chart: "elasticsearch"
+    app: "elasticsearch-master"
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  clusterIP: None # This is needed for statefulset hostnames like elasticsearch-0 to resolve
+  # Create endpoints also if the related pod isn't ready
+  publishNotReadyAddresses: true
+  selector:
+    app: "elasticsearch-master"
+  ports:
+  - name: http
+    port: 9200
+  - name: transport
+    port: 9300
+---
+# Source: backingservices/charts/srs/templates/srsservice_service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: pega-srs
+  namespace: pegabackingservices
+  labels:
+    helm.sh/chart: srs-0.1.0
+    app.kubernetes.io/name: srs
+    app.kubernetes.io/instance: backingservices
+    app.kubernetes.io/version: "1.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: srs-service
+    app.kubernetes.io/instance: backingservices
+
+  ports:
+    - name: rest
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: http80
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+---
+# Source: backingservices/charts/constellation-messaging/templates/messaging-deployment.yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: pega-constl-msg
+  labels:
+    app: pega-constl-msg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pega-constl-msg
+  template:
+    metadata:
+      labels:
+        app: pega-constl-msg
+    spec:
+      imagePullSecrets:
+      - name: pega-constl-msg-registry-secret
+
+      containers:
+      - name: c11n-messaging
+        imagePullPolicy: Always
+        image: YOUR_MESSAGING_SERVICE_IMAGE:TAG
+        resources:
+
+        securityContext:
+
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: false
+          seccompProfile:
+            type: Unconfined
+        args:
+        - --max-semi-space-size=1024
+        - port=3000
+        - urlPath=/c11n-messaging
+        livenessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+          httpGet:
+            path: /c11n-messaging/ping
+            port: 3000
+        readinessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+          httpGet:
+            path: /c11n-messaging/ping
+            port: 3000
+        ports:
+        - containerPort: 3000
+---
+# Source: backingservices/charts/constellation/templates/clln-deployment.yaml
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: constellation
+  labels:
+    app: constellation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: constellation
+  template:
+    metadata:
+      labels:
+        app: constellation
+    spec:
+      imagePullSecrets:
+      - name: constellation-registry-secret
+
+      containers:
+      - name: constellation
+        imagePullPolicy: Always
+        image: YOUR_CONSTELLATION_SERVICE_IMAGE:TAG
+        resources:
+
+        securityContext:
+
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: false
+          seccompProfile:
+            type: Unconfined
+
+        args:
+        - port=3000
+        # constellation URL path, if you change it, you need to change ingress template files too
+        - urlPath=/c11n
+        - logLevel=info
+        livenessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+          httpGet:
+            path: /c11n/buildInfo.json
+            port: 3000
+        readinessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          failureThreshold: 3
+          httpGet:
+            path: /c11n/buildInfo.json
+            port: 3000
+        ports:
+        - containerPort: 3000
+---
+# Source: backingservices/charts/srs/templates/srsservice_deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pega-srs
+  namespace: pegabackingservices
+  labels:
+    helm.sh/chart: srs-0.1.0
+    app.kubernetes.io/name: srs
+    app.kubernetes.io/instance: backingservices
+    app.kubernetes.io/version: "1.7.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: srs-service
+      app.kubernetes.io/instance: backingservices
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: srs-service
+        app.kubernetes.io/instance: backingservices
+
+    spec:
+      imagePullSecrets:
+        - name: pega-srs-reg-secret
+        - name: dockercred
+      containers:
+        - name: srs-service
+          image: debrajbhowmik/pega2421:search-n-reporting-service-os-1.37.6
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: srs-port
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: srs-port
+              scheme: HTTP
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 30
+          env:
+            - name: ELASTICSEARCH_HOST
+              value: elasticsearch-master.pegabackingservices.svc
+            - name: ELASTICSEARCH_PORT
+              value: "9200"
+            - name: ELASTICSEARCH_PROTO
+              value:  "http"
+            - name: ELASTICSEARCH_AUTH_PROVIDER
+              value: basic-authentication
+            - name: ELASTICSEARCH_USERNAME
+              valueFrom:
+               secretKeyRef:
+                  name: "srs-elastic-credentials"
+                  key: username
+            - name: ELASTICSEARCH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "srs-elastic-credentials"
+                  key: password
+            - name: APPLICATION_HOST
+              value: "0.0.0.0"
+            - name: APPLICATION_PORT
+              value: "8080"
+            - name: AUTH_ENABLED
+              value: "false"
+            - name: OAUTH_PUBLIC_KEY_URL
+              value:
+            - name: PUBLIC_KEY_URL
+              value: ""
+            - name: HIGH_SECURE_CRYPTO_MODE_ENABLED
+              value: "false"
+            - name: JAVA_OPTS
+              value:
+          resources:
+            limits:
+              cpu: 1300m
+              memory: 4Gi
+            requests:
+              cpu: 650m
+              memory: 4Gi
+      initContainers:
+      - name: wait-for-internal-es-cluster
+        image: alpine:3.20.2
+        imagePullPolicy: IfNotPresent
+        args:
+          - until $(wget -q -S --spider --timeout=2 -O /dev/null $ELASTICSEARCH_PROTO://$ELASTICSEARCH_USERNAME:$ELASTICSEARCH_PASSWORD@$ELASTICSEARCH_HOST:$ELASTICSEARCH_PORT ); do nslookup -type=ns $ELASTICSEARCH_HOST && echo Waiting for Elasticsearch cluster to become live...; sleep 10; done;
+        command:
+          - sh
+          - -c
+
+        env:
+          - name: ELASTICSEARCH_PROTO
+            value: "http"
+          - name: ELASTICSEARCH_HOST
+            value: elasticsearch-master.pegabackingservices.svc
+          - name: ELASTICSEARCH_PORT
+            value: "9200"
+          - name: ELASTICSEARCH_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: srs-elastic-credentials
+                key: username
+          - name: ELASTICSEARCH_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: srs-elastic-credentials
+                key: password
+---
+# Source: backingservices/charts/elasticsearch/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch-master
+  labels:
+    heritage: "Helm"
+    release: "backingservices"
+    chart: "elasticsearch"
+    app: "elasticsearch-master"
+  annotations:
+    esMajorVersion: "7"
+spec:
+  serviceName: elasticsearch-master-headless
+  selector:
+    matchLabels:
+      app: "elasticsearch-master"
+  replicas: 3
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      name: elasticsearch-master
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 30Gi
+  template:
+    metadata:
+      name: "elasticsearch-master"
+      labels:
+        release: "backingservices"
+        chart: "elasticsearch"
+        app: "elasticsearch-master"
+      annotations:
+
+        configchecksum: 1c76e68e30089244be962ace2280114d67c6703ef1b49a1aa64747525286ff6
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+      automountServiceAccountToken: true
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - "elasticsearch-master"
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - name: elastic-certificates
+          secret:
+            secretName: elastic-certificates
+        - name: esconfig
+          configMap:
+            name: elasticsearch-master-config
+      enableServiceLinks: true
+      initContainers:
+      - name: configure-sysctl
+        securityContext:
+          runAsUser: 0
+          privileged: true
+        image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.9"
+        imagePullPolicy: "IfNotPresent"
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        resources:
+          {}
+
+      containers:
+      - name: "elasticsearch"
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1000
+        image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.9"
+        imagePullPolicy: "IfNotPresent"
+        readinessProbe:
+          exec:
+            command:
+              - bash
+              - -c
+              - |
+                set -e
+                # If the node is starting up wait for the cluster to be ready (request params: "wait_for_status=green&timeout=1s" )
+                # Once it has started only check that the node itself is responding
+                START_FILE=/tmp/.es_start_file
+
+                # Disable nss cache to avoid filling dentry cache when calling curl
+                # This is required with Elasticsearch Docker using nss < 3.52
+                export NSS_SDB_USE_CACHE=no
+
+                http () {
+                  local path="${1}"
+                  local args="${2}"
+                  set -- -XGET -s
+
+                  if [ "$args" != "" ]; then
+                    set -- "$@" $args
+                  fi
+
+                  if [ -n "${ELASTIC_PASSWORD}" ]; then
+                    set -- "$@" -u "elastic:${ELASTIC_PASSWORD}"
+                  fi
+
+                  curl --output /dev/null -k "$@" "http://127.0.0.1:9200${path}"
+                }
+
+                if [ -f "${START_FILE}" ]; then
+                  echo 'Elasticsearch is already running, lets check the node is healthy'
+                  HTTP_CODE=$(http "/" "-w %{http_code}")
+                  RC=$?
+                  if [[ ${RC} -ne 0 ]]; then
+                    echo "curl --output /dev/null -k -XGET -s -w '%{http_code}' \${BASIC_AUTH} http://127.0.0.1:9200/ failed with RC ${RC}"
+                    exit ${RC}
+                  fi
+                  # ready if HTTP code 200, 503 is tolerable if ES version is 6.x
+                  if [[ ${HTTP_CODE} == "200" ]]; then
+                    exit 0
+                  elif [[ ${HTTP_CODE} == "503" && "7" == "6" ]]; then
+                    exit 0
+                  else
+                    echo "curl --output /dev/null -k -XGET -s -w '%{http_code}' \${BASIC_AUTH} http://127.0.0.1:9200/ failed with HTTP code ${HTTP_CODE}"
+                    exit 1
+                  fi
+
+                else
+                  echo 'Waiting for elasticsearch cluster to become ready (request params: "wait_for_status=green&timeout=1s" )'
+                  if http "/_cluster/health?wait_for_status=green&timeout=1s" "--fail" ; then
+                    touch ${START_FILE}
+                    exit 0
+                  else
+                    echo 'Cluster is not yet ready (request params: "wait_for_status=green&timeout=1s" )'
+                    exit 1
+                  fi
+                fi
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 3
+          timeoutSeconds: 5
+        ports:
+        - name: http
+          containerPort: 9200
+        - name: transport
+          containerPort: 9300
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 3Gi
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+        env:
+          - name: node.name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: cluster.initial_master_nodes
+            value: "elasticsearch-master-0,elasticsearch-master-1,elasticsearch-master-2,"
+          - name: discovery.seed_hosts
+            value: "elasticsearch-master-headless"
+          - name: cluster.name
+            value: "elasticsearch"
+          - name: network.host
+            value: "0.0.0.0"
+          - name: cluster.deprecation_indexing.enabled
+            value: "false"
+          - name: ES_JAVA_OPTS
+            value: "-Xmx1024m -Xms1024m"
+          - name: node.data
+            value: "true"
+          - name: node.ingest
+            value: "true"
+          - name: node.master
+            value: "true"
+          - name: node.ml
+            value: "true"
+          - name: node.remote_cluster_client
+            value: "true"
+          - name: ELASTIC_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: srs-elastic-credentials
+          - name: ELASTIC_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: username
+                name: srs-elastic-credentials
+        volumeMounts:
+          - name: "elasticsearch-master"
+            mountPath: /usr/share/elasticsearch/data
+
+          - name: elastic-certificates
+            mountPath: /usr/share/elasticsearch/config/certs
+          - name: esconfig
+            mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+            subPath: elasticsearch.yml
+---
+# Source: backingservices/charts/constellation-messaging/templates/messaging-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pega-constl-msg
+spec:
+  rules:
+  - host: YOUR_CUSTOM_DOMAIN_NAME_HERE
+    http:
+      paths:
+      - path: /c11n-messaging
+        pathType: Prefix
+        backend:
+          service:
+            name: pega-constl-msg
+            port:
+              number: 3000
+---
+# Source: backingservices/charts/constellation/templates/clln-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: constellation
+  annotations:
+
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/target-type: ip
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/healthcheck-path: /c11n/buildInfo.json
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+
+spec:
+  rules:
+  - host: YOUR_CUSTOM_DOMAIN_NAME_HERE
+    http:
+      paths:
+      - path: /c11n
+        pathType: Prefix
+        backend:
+          service:
+            name: constellation
+            port:
+              number: 3000

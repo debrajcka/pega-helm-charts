@@ -1,0 +1,53 @@
+---
+# Default values for srs-search.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+enabled: true
+deploymentName: pega-shared-srs
+
+# srs-service configuration
+srsRuntime:
+  replicaCount: 2
+  # docker image of the srs-service, platform-services/search-n-reporting-service:dockerTag
+  srsImage: "debrajbhowmik/pega2421:search-n-reporting-service-aws-1.34.2"
+  # To avoid exposing Docker credentials, optionally create a separate Docker config secret.
+  # Specify secret names as an array of comma-separated strings. For example: ["secret1", "secret2"]
+  imagePullSecretNames: ["dockercred"]
+  imagePullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: 1300m
+      memory: "4Gi"
+    requests:
+      cpu: 650m
+      memory: "4Gi"
+  serviceType: "ClusterIP"
+  env:
+    # AuthEnabled may be set to true when there is an authentication mechanism in place between SRS and Pega Infinity.
+    AuthEnabled: false
+    # When `AuthEnabled` is `true`, enter the appropriate public key URL. When `AuthEnabled` is `false`(default), leave this parameter empty.
+    OAuthPublicKeyURL: ""
+
+  # Set to true if you require a highly secured connection that complies with NIST SP 800-53 and NIST SP 800-131. Otherwise, set to false.
+  enableSecureCryptoMode: false
+
+  # Use this parameter to configure values for Java options.
+  javaOpts: ""
+
+  # Apply securityContext to SRS pods. Example:
+  # securityContext:
+  #   runAsUser: 9999
+  #   fsGroup: 0
+
+  # Apply securityContext to SRS containers. Example:
+  # containerSecurityContext:
+  #   allowPrivilegeEscalation: false
+  #   capabilities:
+  #     drop:
+  #     - ALL
+  #   runAsNonRoot: true
+
+# By default we enable SRS network policy.
+srsStorage:
+  networkPolicy:
+    enabled: true
